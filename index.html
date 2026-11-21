@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WCTimer • Live Online Monitor</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #121826;
+      --panel-2: #182032;
+      --border: #263149;
+      --text: #e6edf7;
+      --muted: #93a4be;
+      --accent: #00c49a;
+      --accent-2: #2d7ff9;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* LOGIN SCREEN */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: radial-gradient(circle at top, rgba(45, 127, 249, 0.14), transparent 55%), var(--bg);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 22px;
+      line-height: 1.4;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 11px 13px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: var(--accent-2);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent-2);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
+
+    .btn:hover {
+      opacity: 0.92;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .error-msg {
+      margin-top: 12px;
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    /* DASHBOARD */
+    .dashboard {
+      display: none;
+      padding: 20px;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+    }
+
+    .topbar-left h2 {
+      font-size: 1.15rem;
+      margin-bottom: 4px;
+    }
+
+    .meta-line {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .meta-line span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-sm {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-sm:hover {
+      border-color: var(--accent-2);
+    }
+
+    .btn-logout {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 1.45rem;
+      font-weight: 700;
+    }
+
+    .table-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 13px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    th {
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .pc-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .pc-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .pc-icon.online {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .pc-icon.offline {
+      background: rgba(239, 68, 68, 0.16);
+      color: #f87171;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .badge-online {
+      background: rgba(0, 196, 154, 0.15);
+      color: #34d399;
+    }
+
+    .badge-offline {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+
+    .badge-active {
+      background: rgba(45, 127, 249, 0.16);
+      color: #60a5fa;
+    }
+
+    .badge-locked {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+    }
+
+    .empty-row {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px;
+    }
+  </style>
+</head>
+<body>
+  <!-- LOGIN VIEW -->
+  <div id="loginView" class="login-wrap">
+    <form id="loginForm" class="login-card">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <h1>WCTimer Online Monitor</h1>
+      </div>
+      <p class="subtitle">
+        Mag-login gamit ang <strong>Area Name</strong> bilang Username at ang <strong>License Key</strong> bilang Password.
+      </p>
+
+      <div class="field">
+        <label for="areaInput">Username (Area Name)</label>
+        <input id="areaInput" type="text" placeholder="e.g. Area 1" autocomplete="username" required />
+      </div>
+
+      <div class="field">
+        <label for="licenseInput">Password (License Key)</label>
+        <input id="licenseInput" type="password" placeholder="e.g. WCT-XXXX-XXXX-XXXX" autocomplete="current-password" required />
+      </div>
+
+      <button id="loginBtn" type="submit" class="btn">Sign In to Monitor</button>
+      <div id="loginError" class="error-msg"></div>
+    </form>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div id="dashboardView" class="dashboard">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2 id="dashTitle">Area Monitor</h2>
+        <div class="meta-line">
+          Area: <span id="metaArea">-</span> &nbsp;|&nbsp;
+          License: <span id="metaLicense">-</span> &nbsp;|&nbsp;
+          Auto-refresh: <span>Every 5s</span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="refreshBtn" type="button" class="btn-sm">⟳ Refresh Now</button>
+        <button id="logoutBtn" type="button" class="btn-sm btn-logout">Logout</button>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total PCs</div>
+        <div id="statTotalPcs" class="stat-value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Online PCs</div>
+        <div id="statOnlinePcs" class="stat-value" style="color: var(--accent);">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Sessions</div>
+        <div id="statActiveSessions" class="stat-value" style="color: var(--accent-2);">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sales Today</div>
+        <div id="statSalesToday" class="stat-value">₱0.00</div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>PC</th>
+            <th>Connection</th>
+            <th>Session</th>
+            <th>Time Left</th>
+            <th>Sales Today</th>
+            <th>Last Seen</th>
+          </tr>
+        </thead>
+        <tbody id="telemetryBody">
+          <tr>
+            <td colspan="6" class="empty-row">Loading station telemetry...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://mmlpwveddtltxzgmhfth.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_LLlbmv_q-BfaU7yhR3MIzA_v4cfxedw";
+    const SESSION_STORAGE_KEY = "wctimer_monitor_session_v1";
+    const STALE_OFFLINE_MS = 25000;
+
+    let pollTimer = null;
+    let activeSession = null;
+
+    const loginView = document.getElementById("loginView");
+    const dashboardView = document.getElementById("dashboardView");
+    const loginForm = document.getElementById("loginForm");
+    const areaInput = document.getElementById("areaInput");
+    const licenseInput = document.getElementById("licenseInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginError = document.getElementById("loginError");
+
+    const dashTitle = document.getElementById("dashTitle");
+    const metaArea = document.getElementById("metaArea");
+    const metaLicense = document.getElementById("metaLicense");
+    const telemetryBody = document.getElementById("telemetryBody");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    function showError(msg) {
+      loginError.textContent = msg;
+      loginError.style.display = "block";
+    }
+
+    function hideError() {
+      loginError.textContent = "";
+      loginError.style.display = "none";
+    }
+
+    function formatCurrency(val) {
+      const num = Number(val || 0);
+      return "₱" + num.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatLastSeen(isoStr) {
+      if (!isoStr) return "-";
+      const dt = new Date(isoStr);
+      if (isNaN(dt.getTime())) return isoStr;
+      return dt.toLocaleString();
+    }
+
+    function isPcReallyOnline(row) {
+      if (!Boolean(row.is_online)) return false;
+      const tsRaw = row.last_seen || row.updated_at;
+      if (!tsRaw) return true;
+      const ts = new Date(tsRaw).getTime();
+      if (isNaN(ts)) return true;
+      return (Date.now() - ts) <= STALE_OFFLINE_MS;
+    }
+
+    function renderPcIcon(isOnline) {
+      const cls = isOnline ? "online" : "offline";
+      return `
+        <span class="pc-icon ${cls}" title="${isOnline ? "Online" : "Offline"}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+        </span>
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function sbFetch(path) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error(`Supabase request failed (${res.status})`);
+      }
+      return res.json();
+    }
+
+    async function authenticateByAreaAndLicense(areaName, licenseKey) {
+      const cleanArea = areaName.trim();
+      const cleanKey = licenseKey.trim().toUpperCase();
+
+      if (!cleanArea || !cleanKey) {
+        return { ok: false, message: "Ilagay ang Area Name at License Key." };
+      }
+
+      const telemetryRows = await sbFetch(
+        `pc_telemetry?license_key=eq.${encodeURIComponent(cleanKey)}&area_name=ilike.${encodeURIComponent(cleanArea)}&select=*`
+      );
+
+      if (Array.isArray(telemetryRows) && telemetryRows.length > 0) {
+        return {
+          ok: true,
+          areaName: telemetryRows[0].area_name || cleanArea,
+          licenseKey: cleanKey,
+          rows: telemetryRows
+        };
+      }
+
+      const licenseRows = await sbFetch(
+        `licenses?license_key=eq.${encodeURIComponent(cleanKey)}&area_name=ilike.${encodeURIComponent(cleanArea)}&select=*&limit=1`
+      );
+
+      if (Array.isArray(licenseRows) && licenseRows.length > 0) {
+        return {
+          ok: true,
+          areaName: licenseRows[0].area_name || cleanArea,
+          licenseKey: cleanKey,
+          rows: []
+        };
+      }
+
+      return {
+        ok: false,
+        message: "Maling Area Name (username) o License Key (password)."
+      };
+    }
+
+    function renderRows(rows) {
+      const list = Array.isArray(rows) ? rows : [];
+      const onlineCount = list.filter((r) => isPcReallyOnline(r)).length;
+      const activeCount = list.filter(
+        (r) => isPcReallyOnline(r) && String(r.session_status || "").toUpperCase() === "ACTIVE"
+      ).length;
+
+      const salesTodaySum = list.reduce((acc, r) => acc + Number(r.sales_today || 0), 0);
+
+      document.getElementById("statTotalPcs").textContent = String(list.length);
+      document.getElementById("statOnlinePcs").textContent = String(onlineCount);
+      document.getElementById("statActiveSessions").textContent = String(activeCount);
+      document.getElementById("statSalesToday").textContent = formatCurrency(salesTodaySum);
+
+      if (list.length === 0) {
+        telemetryBody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-row">
+              Walang naitalang PC telemetry pa para sa Area at License Key na ito.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      telemetryBody.innerHTML = list
+        .map((row) => {
+          const isOnline = isPcReallyOnline(row);
+          const sessionStatus = isOnline
+            ? String(row.session_status || "LOCKED").toUpperCase()
+            : "OFFLINE";
+          const isActiveSession = isOnline && sessionStatus === "ACTIVE";
+
+          return `
+            <tr>
+              <td>
+                <span class="pc-cell">
+                  ${renderPcIcon(isOnline)}
+                  <span>${escapeHtml(row.pc_name || "PC")}</span>
+                </span>
+              </td>
+              <td>
+                <span class="badge ${isOnline ? "badge-online" : "badge-offline"}">
+                  ${isOnline ? "ONLINE" : "OFFLINE"}
+                </span>
+              </td>
+              <td>
+                <span class="badge ${isActiveSession ? "badge-active" : "badge-locked"}">
+                  ${escapeHtml(sessionStatus)}
+                </span>
+              </td>
+              <td>${escapeHtml(row.time_left || "-")}</td>
+              <td>${formatCurrency(row.sales_today)}</td>
+              <td>${escapeHtml(formatLastSeen(row.last_seen || row.updated_at))}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    }
+
+    async function loadTelemetry() {
+      if (!activeSession) return;
+      try {
+        const rows = await sbFetch(
+          `pc_telemetry?license_key=eq.${encodeURIComponent(activeSession.licenseKey)}&area_name=ilike.${encodeURIComponent(activeSession.areaName)}&order=pc_name.asc&select=*`
+        );
+        renderRows(rows);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function openDashboard(sessionData) {
+      activeSession = {
+        areaName: sessionData.areaName,
+        licenseKey: sessionData.licenseKey
+      };
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(activeSession));
+
+      dashTitle.textContent = `${activeSession.areaName} — Live Monitor`;
+      metaArea.textContent = activeSession.areaName;
+      metaLicense.textContent = activeSession.licenseKey;
+
+      loginView.style.display = "none";
+      dashboardView.style.display = "block";
+
+      if (Array.isArray(sessionData.rows)) {
+        renderRows(sessionData.rows);
+      }
+      loadTelemetry();
+
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(loadTelemetry, 5000);
+    }
+
+    function logout() {
+      activeSession = null;
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      dashboardView.style.display = "none";
+      loginView.style.display = "flex";
+      licenseInput.value = "";
+      hideError();
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideError();
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Checking...";
+
+      try {
+        const result = await authenticateByAreaAndLicense(areaInput.value, licenseInput.value);
+        if (!result.ok) {
+          showError(result.message);
+          return;
+        }
+        openDashboard(result);
+      } catch (err) {
+        showError("Hindi makakonekta sa Supabase: " + err.message);
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Sign In to Monitor";
+      }
+    });
+
+    refreshBtn.addEventListener("click", loadTelemetry);
+    logoutBtn.addEventListener("click", logout);
+
+    (function init() {
+      try {
+        const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.areaName && parsed.licenseKey) {
+            openDashboard(parsed);
+          }
+        }
+      } catch {}
+    })();
+  </script>
+</body>
+</html>
