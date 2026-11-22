@@ -150,7 +150,7 @@
     <div class="header">
       <div class="brand">
         <h1>WCTIMER ONLINE MONITOR</h1>
-        <p>Real-Time PC Telemetry &amp; Per-Device Daily / Monthly Sales</p>
+        <p>Manual Refresh Telemetry &amp; Smooth JS Timer Tick</p>
         <div class="session-badges">
           <span class="meta-tag">Area: <strong id="activeAreaLabel">—</strong></span>
           <span class="meta-tag">License: <strong id="activeKeyLabel">—</strong></span>
@@ -158,7 +158,7 @@
       </div>
       <div class="controls">
         <button id="btnLoad">Load / Refresh</button>
-        <button id="btnAuto" class="secondary">Auto: ON (10s)</button>
+        <button id="btnAuto" class="secondary">Auto: OFF</button>
         <button id="btnLogout" class="danger">Logout</button>
       </div>
     </div>
@@ -213,8 +213,13 @@
     areaInput.value = localStorage.getItem("wct_mon_area") || "";
     keyInput.value = localStorage.getItem("wct_mon_key") || "";
 
-    let autoRefresh = true;
+    // Manual refresh by default so API calls only run on Login or Load / Refresh (unless toggled ON)
+    let autoRefresh = false;
     let pollTimer = null;
+    let tickTimer = null;
+
+    // Stores per-PC live display state for smooth client-side 1s ticking
+    let livePcStates = [];
 
     function formatPeso(val) {
       const num = Number(val || 0);
@@ -235,6 +240,49 @@
       return Number(row.sales_month) || 0;
     }
 
+    // Parses formats like "997D9H47M9S", "12H30M15S", "01:25:10", or "15:00" into total seconds
+    function parseTimeLeftToSeconds(raw) {
+      if (!raw || typeof raw !== "string") return null;
+      const str = raw.trim().toUpperCase();
+      if (!str || str === "—" || str === "EXPIRED" || str === "0S") return null;
+
+      // Compact D/H/M/S format (e.g., 997D9H47M9S)
+      const dhmsMatch = str.match(/^(?:(\d+)D)?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+      if (dhmsMatch && (dhmsMatch[1] || dhmsMatch[2] || dhmsMatch[3] || dhmsMatch[4])) {
+        const d = Number(dhmsMatch[1] || 0);
+        const h = Number(dhmsMatch[2] || 0);
+        const m = Number(dhmsMatch[3] || 0);
+        const s = Number(dhmsMatch[4] || 0);
+        return (((d * 24) + h) * 60 + m) * 60 + s;
+      }
+
+      // HH:MM:SS or MM:SS format
+      if (/^\d{1,3}:\d{2}(?::\d{2})?$/.test(str)) {
+        const parts = str.split(":").map(Number);
+        if (parts.length === 3) {
+          return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+        }
+        if (parts.length === 2) {
+          return (parts[0] * 60) + parts[1];
+        }
+      }
+
+      return null;
+    }
+
+    function formatSecondsToDhms(totalSec) {
+      const sec = Math.max(0, Math.floor(Number(totalSec) || 0));
+      const d = Math.floor(sec / 86400);
+      const h = Math.floor((sec % 86400) / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+
+      if (d > 0) return `${d}D${h}H${m}M${s}S`;
+      if (h > 0) return `${h}H${m}M${s}S`;
+      if (m > 0) return `${m}M${s}S`;
+      return `${s}S`;
+    }
+
     function showDashboardView(area_name, license_key) {
       activeAreaLabel.textContent = area_name;
       activeKeyLabel.textContent = license_key;
@@ -248,6 +296,7 @@
       areaInput.value = "";
       keyInput.value = "";
       loginErr.textContent = "";
+      livePcStates = [];
       dashboardView.classList.add("hidden");
       loginView.classList.remove("hidden");
     }
@@ -275,11 +324,12 @@
       document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
 
       if (pcList.length === 0) {
+        livePcStates = [];
         pcGrid.innerHTML = `<div class="empty">No PC telemetry rows found for this Area &amp; License Key.</div>`;
         return;
       }
 
-      pcGrid.innerHTML = pcList.map(row => {
+      livePcStates = pcList.map((row, idx) => {
         const isOnline = Boolean(row.is_online);
         const statusText = String(row.session_status || (isOnline ? "LOCKED" : "OFFLINE")).toUpperCase();
         let badgeClass = "offline";
@@ -287,32 +337,86 @@
         else if (statusText === "ACTIVE") badgeClass = "active";
         else badgeClass = "locked";
 
-        const indivSales = getIndividualPcSales(row);
-        const indivMonthly = getIndividualPcMonthlySales(row);
-        const timeLeft = row.time_left || "—";
-        const lastSeen = row.last_seen ? new Date(row.last_seen).toLocaleTimeString() : "—";
+        const rawTimeLeft = row.time_left || "—";
+        const parsedSec = parseTimeLeftToSeconds(rawTimeLeft);
+        const canTickTime = isOnline && statusText === "ACTIVE" && parsedSec !== null && parsedSec > 0;
+        const canTickLastSeen = isOnline;
+
+        const baseLastSeenMs = row.last_seen
+          ? (new Date(row.last_seen).getTime() || Date.now())
+          : (isOnline ? Date.now() : null);
+
+        return {
+          id: `pc-card-${idx}`,
+          pcName: row.pc_name || "UNKNOWN",
+          badgeClass,
+          statusText,
+          isOnline,
+          remainingSec: canTickTime ? parsedSec : null,
+          staticTimeLeft: rawTimeLeft,
+          canTickTime,
+          canTickLastSeen,
+          displayLastSeenMs: baseLastSeenMs,
+          indivSales: getIndividualPcSales(row),
+          indivMonthly: getIndividualPcMonthlySales(row)
+        };
+      });
+
+      pcGrid.innerHTML = livePcStates.map(st => {
+        const timeLeftDisplay = st.canTickTime ? formatSecondsToDhms(st.remainingSec) : st.staticTimeLeft;
+        const lastSeenDisplay = st.displayLastSeenMs
+          ? new Date(st.displayLastSeenMs).toLocaleTimeString()
+          : "—";
 
         return `
-          <div class="pc-card">
+          <div class="pc-card" id="${st.id}">
             <div class="pc-top">
-              <div class="pc-name">${escapeHtml(row.pc_name || "UNKNOWN")}</div>
-              <span class="badge ${badgeClass}">${escapeHtml(statusText)}</span>
+              <div class="pc-name">${escapeHtml(st.pcName)}</div>
+              <span class="badge ${st.badgeClass}">${escapeHtml(st.statusText)}</span>
             </div>
-            <div class="pc-row"><span>Time Left</span><strong>${escapeHtml(timeLeft)}</strong></div>
-            <div class="pc-row"><span>Last Seen</span><strong>${escapeHtml(lastSeen)}</strong></div>
+            <div class="pc-row"><span>Time Left</span><strong class="js-time-left">${escapeHtml(timeLeftDisplay)}</strong></div>
+            <div class="pc-row"><span>Last Seen</span><strong class="js-last-seen">${escapeHtml(lastSeenDisplay)}</strong></div>
             <div class="pc-sales-box">
               <div class="pc-sales-line">
                 <span class="pc-sales-label">Individual Sales Today</span>
-                <span class="pc-sales-amount">${formatPeso(indivSales)}</span>
+                <span class="pc-sales-amount">${formatPeso(st.indivSales)}</span>
               </div>
               <div class="pc-sales-line">
                 <span class="pc-sales-label">Monthly Sales</span>
-                <span class="pc-monthly-amount">${formatPeso(indivMonthly)}</span>
+                <span class="pc-monthly-amount">${formatPeso(st.indivMonthly)}</span>
               </div>
             </div>
           </div>
         `;
       }).join("");
+    }
+
+    // Client-side 1s visual ticker so Time Left & Last Seen keep moving smoothly between manual refreshes
+    function tickDisplayTimers() {
+      if (dashboardView.classList.contains("hidden") || livePcStates.length === 0) return;
+
+      for (const st of livePcStates) {
+        const cardEl = document.getElementById(st.id);
+        if (!cardEl) continue;
+
+        if (st.canTickTime && typeof st.remainingSec === "number") {
+          if (st.remainingSec > 0) {
+            st.remainingSec -= 1;
+          }
+          const timeEl = cardEl.querySelector(".js-time-left");
+          if (timeEl) {
+            timeEl.textContent = st.remainingSec > 0 ? formatSecondsToDhms(st.remainingSec) : "EXPIRED";
+          }
+        }
+
+        if (st.canTickLastSeen && typeof st.displayLastSeenMs === "number") {
+          st.displayLastSeenMs += 1000;
+          const seenEl = cardEl.querySelector(".js-last-seen");
+          if (seenEl) {
+            seenEl.textContent = new Date(st.displayLastSeenMs).toLocaleTimeString();
+          }
+        }
+      }
     }
 
     function escapeHtml(str) {
@@ -391,6 +495,8 @@
       btnAuto.className = "secondary";
     });
     btnLogout.addEventListener("click", showLoginView);
+
+    tickTimer = setInterval(tickDisplayTimers, 1000);
 
     pollTimer = setInterval(() => {
       if (autoRefresh && !document.hidden && !dashboardView.classList.contains("hidden")) {
