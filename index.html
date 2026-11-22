@@ -158,7 +158,7 @@
       </div>
       <div class="controls">
         <button id="btnLoad">Load / Refresh</button>
-        <button id="btnAuto" class="secondary">Auto: ON (5s)</button>
+        <button id="btnAuto" class="secondary">Auto: ON (10s)</button>
         <button id="btnLogout" class="danger">Logout</button>
       </div>
     </div>
@@ -387,16 +387,16 @@
     btnLoad.addEventListener("click", fetchMonitorData);
     btnAuto.addEventListener("click", () => {
       autoRefresh = !autoRefresh;
-      btnAuto.textContent = `Auto: ${autoRefresh ? "ON (5s)" : "OFF"}`;
+      btnAuto.textContent = `Auto: ${autoRefresh ? "ON (10s)" : "OFF"}`;
       btnAuto.className = "secondary";
     });
     btnLogout.addEventListener("click", showLoginView);
 
     pollTimer = setInterval(() => {
-      if (autoRefresh && !dashboardView.classList.contains("hidden")) {
+      if (autoRefresh && !document.hidden && !dashboardView.classList.contains("hidden")) {
         fetchMonitorData();
       }
-    }, 5000);
+    }, 10000);
 
     if (areaInput.value.trim() && keyInput.value.trim()) {
       showDashboardView(areaInput.value.trim(), keyInput.value.trim().toUpperCase());
