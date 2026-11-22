@@ -14,13 +14,44 @@
       --muted: #93a4be;
       --accent: #00d09c;
       --accent2: #38bdf8;
+      --monthly: #a78bfa;
       --warn: #f59e0b;
       --danger: #ef4444;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 20px; }
+    body { background: var(--bg); color: var(--text); padding: 20px; min-height: 100vh; }
     .container { max-width: 1280px; margin: 0 auto; }
+    .hidden { display: none !important; }
 
+    /* LOGIN SCREEN */
+    .login-wrap {
+      min-height: calc(100vh - 40px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 26px 22px;
+    }
+    .login-card h1 { font-size: 1.25rem; color: var(--accent); letter-spacing: 0.5px; }
+    .login-card p { font-size: 0.85rem; color: var(--muted); margin-top: 4px; margin-bottom: 18px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+    .field input {
+      width: 100%;
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px; font-size: 0.92rem; outline: none;
+    }
+    .field input:focus { border-color: var(--accent2); }
+    .btn-full { width: 100%; margin-top: 4px; }
+    .login-err { margin-top: 10px; font-size: 0.84rem; color: #fca5a5; min-height: 18px; }
+
+    /* DASHBOARD */
     .header {
       display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
       gap: 12px; background: var(--panel); border: 1px solid var(--border);
@@ -28,22 +59,24 @@
     }
     .brand h1 { font-size: 1.25rem; color: var(--accent); letter-spacing: 0.5px; }
     .brand p { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+    .session-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .meta-tag {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 999px; padding: 3px 10px; font-size: 0.8rem; color: var(--muted);
+    }
+    .meta-tag strong { color: var(--accent2); }
 
     .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    input {
-      background: var(--bg); color: var(--text); border: 1px solid var(--border);
-      border-radius: 8px; padding: 9px 12px; font-size: 0.9rem; outline: none;
-    }
-    input:focus { border-color: var(--accent2); }
     button {
       background: var(--accent); color: #062119; border: none; border-radius: 8px;
       padding: 9px 15px; font-weight: 700; font-size: 0.9rem; cursor: pointer;
     }
     button:hover { filter: brightness(1.08); }
     button.secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+    button.danger { background: rgba(239, 68, 68, 0.16); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); }
 
     .summary-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 14px; margin-bottom: 20px;
     }
     .summary-card {
@@ -53,6 +86,7 @@
     .summary-card .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
     .summary-card .value { font-size: 1.65rem; font-weight: 800; margin-top: 6px; color: var(--accent2); }
     .summary-card .value.sales { color: var(--accent); }
+    .summary-card .value.monthly { color: var(--monthly); }
 
     .pc-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
@@ -76,27 +110,56 @@
     .pc-row strong { color: var(--text); }
     .pc-sales-box {
       margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .pc-sales-line {
       display: flex; justify-content: space-between; align-items: baseline;
     }
     .pc-sales-label { font-size: 0.8rem; color: var(--muted); }
-    .pc-sales-amount { font-size: 1.2rem; font-weight: 800; color: var(--accent); }
+    .pc-sales-amount { font-size: 1.15rem; font-weight: 800; color: var(--accent); }
+    .pc-monthly-amount { font-size: 1.05rem; font-weight: 800; color: var(--monthly); }
 
     .status-bar { margin-top: 14px; font-size: 0.82rem; color: var(--muted); }
     .empty { background: var(--panel); border: 1px dashed var(--border); border-radius: 12px; padding: 32px; text-align: center; color: var(--muted); }
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- LOGIN FORM -->
+  <div id="loginView" class="login-wrap">
+    <form id="loginForm" class="login-card">
+      <h1>WCTIMER MONITOR LOGIN</h1>
+      <p>Ilagay ang Area Name at License Key upang makapasok sa dashboard.</p>
+
+      <div class="field">
+        <label for="areaInput">Area Name</label>
+        <input id="areaInput" type="text" placeholder="Area Name (e.g. Area 1)" required />
+      </div>
+
+      <div class="field">
+        <label for="keyInput">License Key</label>
+        <input id="keyInput" type="text" placeholder="License Key (e.g. WCT-XXXX)" required />
+      </div>
+
+      <button id="btnLogin" class="btn-full" type="submit">Login</button>
+      <div id="loginErr" class="login-err"></div>
+    </form>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div id="dashboardView" class="container hidden">
     <div class="header">
       <div class="brand">
         <h1>WCTIMER ONLINE MONITOR</h1>
-        <p>Real-Time PC Telemetry &amp; Per-Device Daily Sales</p>
+        <p>Real-Time PC Telemetry &amp; Per-Device Daily / Monthly Sales</p>
+        <div class="session-badges">
+          <span class="meta-tag">Area: <strong id="activeAreaLabel">—</strong></span>
+          <span class="meta-tag">License: <strong id="activeKeyLabel">—</strong></span>
+        </div>
       </div>
       <div class="controls">
-        <input id="areaInput" type="text" placeholder="Area Name (e.g. Area 1)" />
-        <input id="keyInput" type="text" placeholder="License Key (e.g. WCT-XXXX)" />
         <button id="btnLoad">Load / Refresh</button>
         <button id="btnAuto" class="secondary">Auto: ON (5s)</button>
+        <button id="btnLogout" class="danger">Logout</button>
       </div>
     </div>
 
@@ -104,6 +167,10 @@
       <div class="summary-card">
         <div class="label">Total Daily Sales</div>
         <div id="totalDailySales" class="value sales">₱0.00</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Total Monthly Sales</div>
+        <div id="totalMonthlySales" class="value monthly">₱0.00</div>
       </div>
       <div class="summary-card">
         <div class="label">Online PCs</div>
@@ -126,10 +193,20 @@
   <script>
     const API_URL = "https://mmlpwveddtltxzgmhfth.supabase.co/functions/v1/wctimer-api";
 
+    const loginView = document.getElementById("loginView");
+    const dashboardView = document.getElementById("dashboardView");
+    const loginForm = document.getElementById("loginForm");
+    const btnLogin = document.getElementById("btnLogin");
+    const loginErr = document.getElementById("loginErr");
+
     const areaInput = document.getElementById("areaInput");
     const keyInput = document.getElementById("keyInput");
+    const activeAreaLabel = document.getElementById("activeAreaLabel");
+    const activeKeyLabel = document.getElementById("activeKeyLabel");
+
     const btnLoad = document.getElementById("btnLoad");
     const btnAuto = document.getElementById("btnAuto");
+    const btnLogout = document.getElementById("btnLogout");
     const pcGrid = document.getElementById("pcGrid");
     const statusBar = document.getElementById("statusBar");
 
@@ -151,6 +228,30 @@
       return Number(row.sales_today) || 0;
     }
 
+    function getIndividualPcMonthlySales(row) {
+      if (row.pc_sales_month !== undefined && row.pc_sales_month !== null) {
+        return Number(row.pc_sales_month) || 0;
+      }
+      return Number(row.sales_month) || 0;
+    }
+
+    function showDashboardView(area_name, license_key) {
+      activeAreaLabel.textContent = area_name;
+      activeKeyLabel.textContent = license_key;
+      loginView.classList.add("hidden");
+      dashboardView.classList.remove("hidden");
+    }
+
+    function showLoginView() {
+      localStorage.removeItem("wct_mon_area");
+      localStorage.removeItem("wct_mon_key");
+      areaInput.value = "";
+      keyInput.value = "";
+      loginErr.textContent = "";
+      dashboardView.classList.add("hidden");
+      loginView.classList.remove("hidden");
+    }
+
     function renderDashboard(rows) {
       const list = Array.isArray(rows) ? rows : [];
       const salesRow = list.find(r => String(r.pc_name || "").toUpperCase() === "MIKROTIK_SALES");
@@ -160,10 +261,15 @@
         ? Number(salesRow.sales_today ?? getIndividualPcSales(salesRow)) || 0
         : pcList.reduce((acc, r) => acc + getIndividualPcSales(r), 0);
 
+      const totalMonthly = salesRow
+        ? Number(salesRow.sales_month ?? getIndividualPcMonthlySales(salesRow)) || 0
+        : pcList.reduce((acc, r) => acc + getIndividualPcMonthlySales(r), 0);
+
       const onlinePcs = pcList.filter(r => Boolean(r.is_online)).length;
       const activePcs = pcList.filter(r => String(r.session_status || "").toUpperCase() === "ACTIVE").length;
 
       document.getElementById("totalDailySales").textContent = formatPeso(totalDaily);
+      document.getElementById("totalMonthlySales").textContent = formatPeso(totalMonthly);
       document.getElementById("onlineCount").textContent = `${onlinePcs} / ${pcList.length}`;
       document.getElementById("activeCount").textContent = String(activePcs);
       document.getElementById("lastSync").textContent = new Date().toLocaleTimeString();
@@ -182,6 +288,7 @@
         else badgeClass = "locked";
 
         const indivSales = getIndividualPcSales(row);
+        const indivMonthly = getIndividualPcMonthlySales(row);
         const timeLeft = row.time_left || "—";
         const lastSeen = row.last_seen ? new Date(row.last_seen).toLocaleTimeString() : "—";
 
@@ -194,8 +301,14 @@
             <div class="pc-row"><span>Time Left</span><strong>${escapeHtml(timeLeft)}</strong></div>
             <div class="pc-row"><span>Last Seen</span><strong>${escapeHtml(lastSeen)}</strong></div>
             <div class="pc-sales-box">
-              <span class="pc-sales-label">Individual Sales Today</span>
-              <span class="pc-sales-amount">${formatPeso(indivSales)}</span>
+              <div class="pc-sales-line">
+                <span class="pc-sales-label">Individual Sales Today</span>
+                <span class="pc-sales-amount">${formatPeso(indivSales)}</span>
+              </div>
+              <div class="pc-sales-line">
+                <span class="pc-sales-label">Monthly Sales</span>
+                <span class="pc-monthly-amount">${formatPeso(indivMonthly)}</span>
+              </div>
             </div>
           </div>
         `;
@@ -210,29 +323,60 @@
         .replace(/"/g, "&quot;");
     }
 
-    async function fetchMonitorData() {
+    async function requestMonitor(area_name, license_key) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "monitor", area_name, license_key })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.message || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
       const area_name = areaInput.value.trim();
       const license_key = keyInput.value.trim().toUpperCase();
 
       if (!area_name || !license_key) {
-        statusBar.textContent = "Enter both Area Name and License Key.";
+        loginErr.textContent = "Enter both Area Name and License Key.";
         return;
       }
 
-      localStorage.setItem("wct_mon_area", area_name);
-      localStorage.setItem("wct_mon_key", license_key);
+      loginErr.textContent = "";
+      btnLogin.disabled = true;
+      btnLogin.textContent = "Checking...";
+
+      try {
+        const data = await requestMonitor(area_name, license_key);
+        localStorage.setItem("wct_mon_area", area_name);
+        localStorage.setItem("wct_mon_key", license_key);
+        showDashboardView(area_name, license_key);
+        renderDashboard(data.rows || []);
+        statusBar.textContent = `Connected to ${area_name} • ${new Date().toLocaleString()}`;
+      } catch (err) {
+        loginErr.textContent = `Login failed: ${err.message}`;
+      } finally {
+        btnLogin.disabled = false;
+        btnLogin.textContent = "Login";
+      }
+    });
+
+    async function fetchMonitorData() {
+      const area_name = (localStorage.getItem("wct_mon_area") || areaInput.value).trim();
+      const license_key = (localStorage.getItem("wct_mon_key") || keyInput.value).trim().toUpperCase();
+
+      if (!area_name || !license_key) {
+        showLoginView();
+        return;
+      }
 
       try {
         statusBar.textContent = "Syncing with wctimer-api...";
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "monitor", area_name, license_key })
-        });
-        const data = await res.json();
-        if (!res.ok || !data.ok) {
-          throw new Error(data.message || `HTTP ${res.status}`);
-        }
+        const data = await requestMonitor(area_name, license_key);
         renderDashboard(data.rows || []);
         statusBar.textContent = `Connected to ${area_name} • ${new Date().toLocaleString()}`;
       } catch (err) {
@@ -244,14 +388,18 @@
     btnAuto.addEventListener("click", () => {
       autoRefresh = !autoRefresh;
       btnAuto.textContent = `Auto: ${autoRefresh ? "ON (5s)" : "OFF"}`;
-      btnAuto.className = autoRefresh ? "secondary" : "secondary";
+      btnAuto.className = "secondary";
     });
+    btnLogout.addEventListener("click", showLoginView);
 
     pollTimer = setInterval(() => {
-      if (autoRefresh) fetchMonitorData();
+      if (autoRefresh && !dashboardView.classList.contains("hidden")) {
+        fetchMonitorData();
+      }
     }, 5000);
 
     if (areaInput.value.trim() && keyInput.value.trim()) {
+      showDashboardView(areaInput.value.trim(), keyInput.value.trim().toUpperCase());
       fetchMonitorData();
     }
   </script>
